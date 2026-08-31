@@ -9,6 +9,7 @@ import { OSM_CARTO, OSM_CARTO_ZOOM_OFFSET } from '@/services/journey/OsmCartoThe
 
 const props=defineProps<{world:World;distance:number;unlocked:string[];follow:boolean}>()
 const container=ref<any>(null)
+const mapReady=ref(false)
 const geometry=createGeoRouteGeometry(routeSource as any)
 const progress=computed(()=>props.world.totalDistance?Math.max(0,Math.min(1,props.distance/props.world.totalDistance)):0)
 let map:MapLibreMap|undefined
@@ -59,8 +60,15 @@ onMounted(async()=>{
   map=new maplibregl.Map({
     container:mapContainer,
     center:geometry.pointAt(progress.value),zoom:12.5,
+    fadeDuration:0,maxTileCacheZoomLevels:2,refreshExpiredTiles:false,renderWorldCopies:false,
     attributionControl:false,
     style:{version:8,glyphs:'/static/maps/fonts/{fontstack}/{range}.pbf',sources:{},layers:[{id:'sea',type:'background',paint:{'background-color':OSM_CARTO.background.water}}]}
+  })
+  map.on('error',(event:any)=>{
+    if(event?.sourceId==='local-map'||String(event?.error?.message??'').includes('/static/maps/tiles/')){
+      const tile=event?.tile?.tileID?.canonical
+      console.warn(`[Faraway] 矢量地图瓦片加载失败：${event?.error?.message??'未知错误'}${tile?` (z${tile.z}/${tile.x}/${tile.y})`:''}`)
+    }
   })
   map.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right')
   map.addControl(new maplibregl.AttributionControl({compact:true}),'bottom-right')
@@ -69,7 +77,8 @@ onMounted(async()=>{
       const landResponse=await fetch('/static/maps/maclehose-land-v2.json')
       if(!landResponse.ok)throw new Error(`land map ${landResponse.status}`)
       const landMap=await landResponse.json()
-      map!.addSource('local-map',{type:'vector',tiles:['/static/maps/tiles/z{z}/{x}-{y}.pbf'],minzoom:10,maxzoom:14,bounds:[113.93,22.28,114.43,22.52],attribution:'© OpenStreetMap contributors'})
+      const tileBase=new URL('/static/maps/tiles/',window.location.href).href
+      map!.addSource('local-map',{type:'vector',tiles:[`${tileBase}{z}/{x}/{y}.pbf?v=5`],minzoom:8,maxzoom:14,bounds:[113.93,22.28,114.43,22.52],attribution:'© OpenStreetMap contributors'})
       map!.addSource('coastline-land',{type:'geojson',data:landMap})
       const nativeAddLayer=map!.addLayer.bind(map!)
       const normalizeCartoZoom=(value:any):any=>{
@@ -165,23 +174,24 @@ onMounted(async()=>{
         'text-halo-color':halo,'text-halo-width':OSM_CARTO.text.placeHaloRadius
       }) as any
       map!.addLayer({id:'local-place-city',type:'symbol',source:'local-map',filter:['all',namedPlace,['==',['get','kind'],'city']],minzoom:8,maxzoom:14,layout:{...symbolTextLayout,'text-size':['step',['zoom'],13,10,14,11,15]},paint:placePaint(99)})
-      // Carto's category=2 placenames are towns: 10 px at z9, 11 at z11,
-      // 13 at z12 and 15 at z14. They disappear before the small-place layers.
-      map!.addLayer({id:'local-place-town',type:'symbol',source:'local-map',filter:['all',namedPlace,['==',['get','kind'],'town']],minzoom:9,maxzoom:16,layout:{...symbolTextLayout,'text-size':['step',['zoom'],10,11,11,12,13,14,15]},paint:placePaint(99)})
       map!.addLayer({id:'local-place-suburb',type:'symbol',source:'local-map',filter:['all',namedPlace,['==',['get','kind'],'suburb']],minzoom:12,maxzoom:17,layout:{...symbolTextLayout,'text-size':['step',['zoom'],11,13,12,14,14,16,15]},paint:placePaint(14,['step',['zoom'],OSM_CARTO.text.standardHalo,14,OSM_CARTO.text.opaqueHalo])})
       map!.addLayer({id:'local-place-village',type:'symbol',source:'local-map',filter:['all',namedPlace,['==',['get','kind'],'village']],minzoom:12,maxzoom:17,layout:{...symbolTextLayout,'text-size':['step',['zoom'],10,13,11,14,13,15,14,16,15]},paint:placePaint(14,['step',['zoom'],OSM_CARTO.text.standardHalo,14,OSM_CARTO.text.opaqueHalo])})
       map!.addLayer({id:'local-place-quarter',type:'symbol',source:'local-map',filter:['all',namedPlace,['==',['get','kind'],'quarter']],minzoom:14,maxzoom:17,layout:{...symbolTextLayout,'text-size':['step',['zoom'],11,15,12,16,14]},paint:placePaint(15,OSM_CARTO.text.opaqueHalo)})
       map!.addLayer({id:'local-place-hamlet',type:'symbol',source:'local-map',filter:['all',namedPlace,['==',['get','kind'],'hamlet']],minzoom:14,maxzoom:18,layout:{...symbolTextLayout,'text-size':['step',['zoom'],10,15,11,16,12]},paint:placePaint(15,['step',['zoom'],OSM_CARTO.text.opaqueHalo,15,OSM_CARTO.text.standardHalo,16,OSM_CARTO.text.opaqueHalo])})
       map!.addLayer({id:'local-place-neighbourhood',type:'symbol',source:'local-map',filter:['all',namedPlace,['in',['get','kind'],['literal',['neighbourhood','isolated_dwelling','farm']]]],minzoom:15,maxzoom:20,layout:{...symbolTextLayout,'text-size':['step',['zoom'],10,16,12]},paint:placePaint(16,['step',['zoom'],OSM_CARTO.text.standardHalo,16,OSM_CARTO.text.opaqueHalo])})
+      // Later MapLibre symbol layers win cross-layer collisions. Keep towns
+      // above small places so 西貢 remains primary until its official z16 exit;
+      // 西貢市中心 can then take over for the final suburb zoom interval.
+      map!.addLayer({id:'local-place-town',type:'symbol',source:'local-map',filter:['all',namedPlace,['==',['get','kind'],'town']],minzoom:9,maxzoom:16,layout:{...symbolTextLayout,'text-size':['step',['zoom'],10,11,11,12,13,14,15]},paint:placePaint(99)})
       const peakIconFilter=['all',['==',['get','layer'],'place'],['==',['get','kind'],'peak']] as any
       const namedPeakFilter=['all',peakIconFilter,['has','name']] as any
-      const unnamedPeakFilter=['all',peakIconFilter,['!',['has','name']]] as any
-      const peakIconLayout={'icon-image':'osm-carto-peak','icon-size':1,'icon-allow-overlap':false,'icon-ignore-placement':false,'icon-padding':0} as any
-      // Below z13 Carto draws only the marker. From z13 marker and label must be
-      // one symbol so their collision box and anchor cannot drift apart.
-      map!.addLayer({id:'local-peak-icons-low-zoom',type:'symbol',source:'local-map',filter:namedPeakFilter,minzoom:11,maxzoom:13,layout:peakIconLayout})
-      map!.addLayer({id:'local-peak-icons-unnamed',type:'symbol',source:'local-map',filter:unnamedPeakFilter,minzoom:11,layout:peakIconLayout})
-      map!.addLayer({id:'local-peaks-named',type:'symbol',source:'local-map',filter:namedPeakFilter,minzoom:13,layout:{...peakIconLayout,...symbolTextLayout,'text-size':OSM_CARTO.text.peakSize,'text-offset':[0,OSM_CARTO.text.peakOffsetEm],'text-anchor':'center','text-max-width':OSM_CARTO.text.peakMaxWidthEm,'text-line-height':OSM_CARTO.text.peakLineHeight,'text-padding':0},paint:{'text-color':OSM_CARTO.text.peak,'text-halo-color':OSM_CARTO.text.standardHalo,'text-halo-width':OSM_CARTO.text.haloRadius}})
+      const peakSortKey=['case',['has','ele'],['-',0,['to-number',['get','ele'],0]],['to-number',['get','source_rank'],0]] as any
+      const peakIconLayout={'icon-image':'osm-carto-peak','icon-size':1,'icon-allow-overlap':false,'icon-ignore-placement':true,'icon-padding':0,'symbol-sort-key':peakSortKey} as any
+      // Keep the official marker pass continuous from z11 onward. The label
+      // pass starts at z13 without replacing the icon bucket, so zooming across
+      // the threshold cannot tear down and recreate the marker placement.
+      map!.addLayer({id:'local-peak-icons',type:'symbol',source:'local-map',filter:namedPeakFilter,minzoom:11,layout:peakIconLayout})
+      map!.addLayer({id:'local-peak-labels',type:'symbol',source:'local-map',filter:namedPeakFilter,minzoom:13,layout:{...symbolTextLayout,'symbol-sort-key':peakSortKey,'text-size':OSM_CARTO.text.peakSize,'text-offset':[0,OSM_CARTO.text.peakOffsetEm],'text-anchor':'center','text-max-width':['case',['<=',['length',['get','name']],4],OSM_CARTO.text.peakShortNameWidthEm,OSM_CARTO.text.peakMaxWidthEm],'text-line-height':OSM_CARTO.text.peakLineHeight,'text-padding':0},paint:{'text-color':OSM_CARTO.text.peak,'text-halo-color':OSM_CARTO.text.standardHalo,'text-halo-width':OSM_CARTO.text.haloRadius}})
       map!.addLayer=nativeAddLayer as MapLibreMap['addLayer']
     }catch(error){console.warn('[Faraway] 本地地图读取失败，继续显示旅程路线。',error)}
     map!.addSource('full-route',{type:'geojson',data:lineFeature(geometry.coordinates)})
@@ -222,6 +232,7 @@ onMounted(async()=>{
     avatarElement.style.cssText='width:70px;height:74px;display:block;filter:drop-shadow(0 3px 4px rgba(28,39,30,.32));'
     const image=document.createElement('img');image.src=props.world.assets.travelerImage??'/static/worlds/traveler.png';image.alt='旅行者';image.width=70;image.height=70;image.style.cssText='display:block;width:70px;height:70px;max-width:70px;max-height:70px;object-fit:contain;';avatarElement.appendChild(image)
     avatar=new maplibregl.Marker({element:avatarElement,anchor:'bottom'}).setLngLat(geometry.pointAt(progress.value)).addTo(map!)
+    map!.once('idle',()=>{mapReady.value=true})
   })
 })
 
@@ -230,11 +241,12 @@ watch(()=>props.follow,following=>{if(following&&map)map.easeTo({center:geometry
 onUnmounted(()=>{if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(cameraFrame);checkpointMarkers.forEach(marker=>marker.remove());avatar?.remove();map?.remove()})
 </script>
 
-<template><view class="osm-map-shell"><view ref="container" class="osm-map" /></view></template>
+<template><view class="osm-map-shell"><view ref="container" class="osm-map" :class="{'is-ready':mapReady}" /></view></template>
 
 <style lang="scss">
-.osm-map-shell{position:relative;width:100%;height:100%;min-height:190px;overflow:hidden;background:#d9ddd4}
-.osm-map{position:absolute;inset:0}
+.osm-map-shell{position:relative;width:100%;height:100%;min-height:190px;overflow:hidden;background:#d8e5e4}
+.osm-map{position:absolute;inset:0;opacity:0;transition:opacity .18s ease-out}
+.osm-map.is-ready{opacity:1}
 .osm-map .maplibregl-canvas{outline:none}
 .osm-map .maplibregl-ctrl-attrib{font-size:10px;background:rgba(248,246,238,.84)}
 .osm-checkpoint-label{padding:3px 4px;border-radius:5px;background:rgba(248,246,238,.78);color:#405145;font:600 12px/1.2 "Noto Sans SC","Noto Sans",Arial,sans-serif;white-space:nowrap;box-shadow:0 1px 3px rgba(25,38,29,.11);pointer-events:none}

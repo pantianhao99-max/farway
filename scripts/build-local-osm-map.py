@@ -66,7 +66,10 @@ class CompactMap(osmium.SimpleHandler):
         name=tags.get('name:zh') or tags.get('name') or tags.get('name:en')
         major=highway in ('motorway','trunk','primary','secondary','tertiary')
         neighbourhood=highway in ('unclassified','residential','service','living_street') and near_route(*center,.032)
-        trail=highway in ('track','path','footway','steps','pedestrian','cycleway') and near_route(*center,.018)
+        # Keep trails throughout the same local-map corridor as land cover.
+        # The former ~2 km route-only cutoff produced spatial holes that no
+        # MapLibre style or zoom rule could recover.
+        trail=highway in ('track','path','footway','steps','pedestrian','cycleway') and near_route(*center,.075)
         local=neighbourhood or trail
         if major or local:
             self.add({'type':'LineString','coordinates':simplify(points)},'road',kind=highway,name=name)

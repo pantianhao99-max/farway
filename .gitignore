@@ -1,0 +1,25 @@
+# Dependencies and local package-manager caches
+node_modules/
+node_modules.*-backup/
+.pnpm-store/
+
+# Build outputs and packaged applications
+dist/
+
+# Local environment files
+.env.local
+.env.*.local
+
+# Logs and diagnostic output
+*.log
+*.err.log
+.codex-*
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+*.swp
+
+# TypeScript incremental build metadata
+*.tsbuildinfo
+

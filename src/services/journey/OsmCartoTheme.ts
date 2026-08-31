@@ -25,7 +25,9 @@ export const OSM_CARTO={
     place:'#222222',placeLight:'#777777',peak:'#6e441e',halo:'#ffffff',haloOpacity:.6,
     standardHalo:'rgba(255,255,255,0.6)',opaqueHalo:'#ffffff',
     fontFamily:['Noto Sans CJK SC','Noto Sans SC','Noto Sans','Arial Unicode MS'],
-    peakSize:10,peakOffsetEm:.7,peakMaxWidthEm:3,peakLineHeight:.85,
+    // Mapnik's text-dy=7 is baseline-based. MapLibre offsets the glyph box;
+    // 1em keeps the 1px halo clear of the bottom of the 8px peak marker.
+    peakSize:10,peakOffsetEm:1,peakMaxWidthEm:3,peakShortNameWidthEm:4,peakLineHeight:.85,
     haloRadius:1,placeHaloRadius:1.5,placeMargin:7
   }
 } as const
