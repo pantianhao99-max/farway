@@ -25,7 +25,11 @@ function onSplashFinish() {
 
 <style scoped lang="scss">
 .app-root {
-  width: 100%;
-  min-height: 100vh;
+  position: fixed;
+  z-index: 9999;
+  inset: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
 }
 </style>

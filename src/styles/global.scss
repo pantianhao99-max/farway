@@ -89,19 +89,35 @@
   --leading-body: 1.65;
 }
 
+html, body,
+uni-app, uni-page, uni-page-wrapper, uni-page-body,
+.uni-app, .uni-page, .uni-page-wrapper, .uni-page-body,
+scroll-view, .uni-scroll-view {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
 html, body {
   width: 100%;
   max-width: 100%;
   margin: 0;
   padding: 0;
   overflow-x: hidden;
-  scrollbar-width: none;
 }
 
 html::-webkit-scrollbar,
 body::-webkit-scrollbar,
+uni-app::-webkit-scrollbar,
 uni-page::-webkit-scrollbar,
-uni-scroll-view::-webkit-scrollbar { display: none; }
+uni-page-wrapper::-webkit-scrollbar,
+uni-page-body::-webkit-scrollbar,
+scroll-view::-webkit-scrollbar,
+uni-scroll-view::-webkit-scrollbar,
+.uni-app::-webkit-scrollbar,
+.uni-page::-webkit-scrollbar,
+.uni-page-wrapper::-webkit-scrollbar,
+.uni-page-body::-webkit-scrollbar,
+.uni-scroll-view::-webkit-scrollbar { display: none; }
 
 uni-app, uni-page, uni-page-wrapper, uni-page-body {
   width: 100%;
@@ -110,6 +126,13 @@ uni-app, uni-page, uni-page-wrapper, uni-page-body {
   padding-left: 0;
   padding-right: 0;
   overflow-x: hidden;
+}
+
+/* 页面自行预留底部导航空间，关闭 uni-app 额外生成的 TabBar 占位块。 */
+.uni-app--showtabbar uni-page-wrapper::after {
+  display: none !important;
+  height: 0 !important;
+  content: none !important;
 }
 
 @supports (height: 100dvh) {
@@ -224,8 +247,8 @@ uni-app {
 }
 
 /* —— 页面底部留白 —— */
-.worlds  { min-height: var(--page-height); padding-bottom: calc(28px + env(safe-area-inset-bottom)) !important; }
-.profile { min-height: var(--page-height); padding-bottom: calc(30px + env(safe-area-inset-bottom)) !important; }
+.worlds  { min-height: var(--page-height); padding-bottom: calc(88px + env(safe-area-inset-bottom)) !important; }
+.profile { min-height: var(--page-height); padding-bottom: calc(88px + env(safe-area-inset-bottom)) !important; }
 
 /* —— 弹窗遮罩居中 —— */
 .profile > .overlay,

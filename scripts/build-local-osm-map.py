@@ -72,9 +72,14 @@ class CompactMap(osmium.SimpleHandler):
         trail=highway in ('track','path','footway','steps','pedestrian','cycleway') and near_route(*center,.075)
         local=neighbourhood or trail
         if major or local:
-            self.add({'type':'LineString','coordinates':simplify(points)},'road',kind=highway,name=name)
+            self.add({'type':'LineString','coordinates':simplify(points)},'road',kind=highway,name=name,
+                     bridge=tags.get('bridge'),tunnel=tags.get('tunnel'),access=tags.get('access'),
+                     surface=tags.get('surface'),tracktype=tags.get('tracktype'),service=tags.get('service'),
+                     layer_order=tags.get('layer'),oneway=tags.get('oneway'))
         elif tags.get('railway') in ('rail','light_rail','subway'):
-            self.add({'type':'LineString','coordinates':simplify(points)},'railway',kind=tags.get('railway'),name=name)
+            self.add({'type':'LineString','coordinates':simplify(points)},'railway',kind=tags.get('railway'),name=name,
+                     bridge=tags.get('bridge'),tunnel=tags.get('tunnel'),service=tags.get('service'),
+                     preserved=tags.get('preserved'),layer_order=tags.get('layer'))
         elif tags.get('boundary')=='administrative' and tags.get('admin_level') in ('4','5','6','7','8'):
             self.add({'type':'LineString','coordinates':simplify(points,.00012)},'boundary',kind=tags.get('admin_level'),name=name)
         elif (tags.get('waterway') and near_route(*center,.04)) or natural=='coastline':
@@ -97,9 +102,12 @@ class CompactMap(osmium.SimpleHandler):
             if not points:return
             samples=points[::max(1,len(points)//24)]
             if not any(in_bounds(*point) for point in samples):return
-            threshold=.012 if tags.get('building') else .075
-            if not any(near_route(*point,threshold) for point in samples):return
-            self.add(geometry,'building' if tags.get('building') else 'area',kind='building' if tags.get('building') else kind,name=tags.get('name:zh') or tags.get('name') or tags.get('name:en'),landcover=tags.get('landcover'),leaf_type=tags.get('leaf_type'))
+            # Landcover must remain complete across the advertised offline map
+            # bounds. Corridor-clipping forests/scrub caused their patterns to
+            # disappear simply by panning away from the trail. Only buildings
+            # retain the compact route-local cutoff for file-size control.
+            if tags.get('building') and not any(near_route(*point,.012) for point in samples):return
+            self.add(geometry,'building' if tags.get('building') else 'area',kind='building' if tags.get('building') else kind,name=tags.get('name:zh') or tags.get('name') or tags.get('name:en'),landcover=tags.get('landcover'),leaf_type=tags.get('leaf_type'),wetland=tags.get('wetland'),surface=tags.get('surface'),religion=tags.get('religion'))
         except (RuntimeError,ValueError,TypeError):return
 
 if len(sys.argv)!=3:raise SystemExit('usage: build-local-osm-map.py INPUT.osm.pbf OUTPUT.json')
