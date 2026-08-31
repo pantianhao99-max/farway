@@ -33,11 +33,11 @@ function checkpointLabelElement(name:string,sectionBoundary:boolean){
   // appearance inline so stylesheet timing/HMR cannot leave bare text behind.
   element.style.cssText=[
     'display:block',
-    `padding:${sectionBoundary?'4px 5px':'3px 4px'}`,
+    `padding:${sectionBoundary?'2px 4px':'1px 3px'}`,
     'border-radius:5px',
     `background-color:${sectionBoundary?'rgba(248,246,238,.96)':'rgba(248,246,238,.84)'}`,
     `color:${sectionBoundary?'#26382d':'#405145'}`,
-    `font:${sectionBoundary?'700 13px':'600 12px'}/1.2 var(--font-sans,"PingFang SC","Microsoft YaHei",sans-serif)`,
+    `font:${sectionBoundary?'700 12px':'600 11px'}/1.2 var(--font-sans,"PingFang SC","Microsoft YaHei",sans-serif)`,
     'white-space:nowrap',
     `box-shadow:${sectionBoundary?'0 2px 7px rgba(25,38,29,.2)':'0 1px 3px rgba(25,38,29,.11)'}`,
     'pointer-events:none',
@@ -54,8 +54,12 @@ function isSectionBoundary(distance:number){
 
 type CheckpointLabelSide='left'|'right'|'top'|'bottom'
 
-function checkpointLabelPlacement(distance:number,index:number):{anchor:CheckpointLabelSide;offset:[number,number]}{
-  if(!map)return {anchor:'left',offset:[12,0]}
+function checkpointLabelPlacement(distance:number,index:number,sectionBoundary:boolean):{anchor:CheckpointLabelSide;offset:[number,number]}{
+  // Halo radius + 1px stroke + 1px visual gap: 16px for section nodes,
+  // 12px for regular nodes. Applying the same distance on every axis keeps
+  // the capsule edge equally far from the node edge in all four directions.
+  const gap=sectionBoundary?16:12
+  if(!map)return {anchor:'left',offset:[gap,0]}
   const routeProgress=props.world.totalDistance?distance/props.world.totalDistance:0
   const sampleGap=.0025
   const before=map.project(geometry.pointAt(Math.max(0,routeProgress-sampleGap)))
@@ -76,7 +80,6 @@ function checkpointLabelPlacement(distance:number,index:number):{anchor:Checkpoi
     else if(point.x>map.getContainer().clientWidth-edgePadding)side='right'
   }
 
-  const gap=14
   const offsets:Record<CheckpointLabelSide,[number,number]>={
     left:[gap,0],right:[-gap,0],top:[0,gap],bottom:[0,-gap]
   }
@@ -311,14 +314,9 @@ onMounted(async()=>{
       const sectionBoundary=isSectionBoundary(cp.distance)
       const element=checkpointLabelElement(cp.name,sectionBoundary)
       element.title=`${cp.name} · ${cp.distance} km`
-      const placement=checkpointLabelPlacement(cp.distance,index)
+      const placement=checkpointLabelPlacement(cp.distance,index,sectionBoundary)
       element.classList.add(`placement-${placement.anchor}`)
-      const offset:[number,number]=placement.anchor==='left'
-        ? [sectionBoundary?16:12,0]
-        : placement.anchor==='right'
-          ? [sectionBoundary?-16:-12,0]
-          : placement.offset
-      checkpointMarkers.push(new maplibregl.Marker({element,anchor:placement.anchor,offset}).setLngLat(geometry.pointAt(cp.distance/props.world.totalDistance)).addTo(map!))
+      checkpointMarkers.push(new maplibregl.Marker({element,anchor:placement.anchor,offset:placement.offset}).setLngLat(geometry.pointAt(cp.distance/props.world.totalDistance)).addTo(map!))
     })
     const avatarElement=markerElement('osm-avatar')
     avatarElement.style.cssText='width:70px;height:74px;display:block;filter:drop-shadow(0 3px 4px rgba(28,39,30,.32));'
@@ -341,8 +339,8 @@ onUnmounted(()=>{if(typeof cancelAnimationFrame==='function')cancelAnimationFram
 .osm-map.is-ready{opacity:1}
 .osm-map .maplibregl-canvas{outline:none}
 .osm-map .maplibregl-ctrl-attrib{font-size:10px;background:rgba(248,246,238,.84)}
-.osm-checkpoint-label{display:block;padding:3px 4px;border-radius:5px;background-color:rgba(248,246,238,.84);color:#405145;font:600 12px/1.2 var(--font-sans,"PingFang SC","Microsoft YaHei",sans-serif);white-space:nowrap;box-shadow:0 1px 3px rgba(25,38,29,.11);pointer-events:none;isolation:isolate;backface-visibility:hidden}
-.osm-checkpoint-label.is-section-boundary{z-index:2;padding:4px 5px;background:rgba(248,246,238,.96);color:#26382d;font-size:13px;font-weight:750;box-shadow:0 2px 7px rgba(25,38,29,.2)}
+.osm-checkpoint-label{display:block;padding:1px 3px;border-radius:5px;background-color:rgba(248,246,238,.84);color:#405145;font:600 11px/1.2 var(--font-sans,"PingFang SC","Microsoft YaHei",sans-serif);white-space:nowrap;box-shadow:0 1px 3px rgba(25,38,29,.11);pointer-events:none;isolation:isolate;backface-visibility:hidden}
+.osm-checkpoint-label.is-section-boundary{z-index:2;padding:2px 4px;background:rgba(248,246,238,.96);color:#26382d;font-size:12px;font-weight:750;box-shadow:0 2px 7px rgba(25,38,29,.2)}
 .osm-avatar{width:70px;height:74px;filter:drop-shadow(0 3px 4px rgba(28,39,30,.32))}
 .osm-avatar img{display:block;width:100%;height:100%;object-fit:contain}
 </style>
