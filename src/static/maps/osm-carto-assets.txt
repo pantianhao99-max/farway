@@ -1,0 +1,5 @@
+Peak, broadleaved tree, and needleleaved tree shapes are derived from
+OpenStreetMap Carto by Andy Allan and contributors:
+https://github.com/openstreetmap-carto/openstreetmap-carto
+
+OpenStreetMap Carto is released under the CC0 Public Domain Dedication 1.0.

@@ -1,0 +1,20 @@
+{
+  "pages": [
+    { "path": "pages/worlds/index", "style": { "navigationStyle": "custom" } },
+    { "path": "pages/journey/index", "style": { "navigationStyle": "custom" } },
+    { "path": "pages/profile/index", "style": { "navigationStyle": "custom" } },
+    { "path": "pages/atlas/index", "style": { "navigationStyle": "custom" } }
+  ],
+  "tabBar": {
+    "custom": false,
+    "color": "#798075",
+    "selectedColor": "#506A4B",
+    "backgroundColor": "#F6F3EA",
+    "borderStyle": "white",
+    "list": [
+      { "pagePath": "pages/worlds/index", "text": "世界", "iconPath": "static/tabbar/world.svg", "selectedIconPath": "static/tabbar/world-active.svg" },
+      { "pagePath": "pages/profile/index", "text": "我的", "iconPath": "static/tabbar/profile.svg", "selectedIconPath": "static/tabbar/profile-active.svg" }
+    ]
+  },
+  "globalStyle": { "backgroundColor": "#F6F3EA", "navigationBarTextStyle": "black" }
+}

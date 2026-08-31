@@ -1,0 +1,10 @@
+{
+  "name": "远方",
+  "appid": "__UNI__FARAWAY",
+  "description": "现实步行驱动的冒险远征",
+  "versionName": "0.1.0",
+  "versionCode": "100",
+  "vueVersion": "3",
+  "transformPx": false,
+  "h5": { "title": "远方" }
+}

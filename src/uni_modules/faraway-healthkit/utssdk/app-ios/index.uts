@@ -1,0 +1,109 @@
+import { Date } from 'Foundation'
+import {
+  HKHealthStore,
+  HKObjectType,
+  HKQuantityType,
+  HKQuantityTypeIdentifier,
+  HKQuery,
+  HKQueryOptions,
+  HKStatisticsOptions,
+  HKStatisticsQuery,
+  HKUnit
+} from 'HealthKit'
+import {
+  HealthAuthorizationOptions,
+  HealthAuthorizationSuccess,
+  HealthDistanceOptions,
+  HealthDistanceSuccess,
+  HealthNativeError,
+  IsHealthDataAvailable,
+  QueryWalkingRunningDistance,
+  RequestHealthAuthorization
+} from '../interface.uts'
+
+const healthStore = new HKHealthStore()
+
+function nativeError(code: number, message: string): HealthNativeError {
+  return { errCode: code, errMsg: message }
+}
+
+export const isHealthDataAvailable: IsHealthDataAvailable = function (): boolean {
+  return HKHealthStore.isHealthDataAvailable()
+}
+
+export const requestHealthAuthorization: RequestHealthAuthorization = function (options: HealthAuthorizationOptions) {
+  if (!HKHealthStore.isHealthDataAvailable()) {
+    const error = nativeError(71001, 'HealthKit is unavailable on this device')
+    options.fail?.(error)
+    options.complete?.(error)
+    return
+  }
+
+  const distanceType = HKObjectType.quantityType(forIdentifier = HKQuantityTypeIdentifier.distanceWalkingRunning)
+  if (distanceType == null) {
+    const error = nativeError(71002, 'Unable to create walking and running distance type')
+    options.fail?.(error)
+    options.complete?.(error)
+    return
+  }
+
+  const readTypes = new Set<HKObjectType>()
+  readTypes.add(distanceType)
+  healthStore.requestAuthorization(toShare = null, read = readTypes, completion = (success, error) => {
+    if (!success) {
+      const failure = nativeError(71003, error?.localizedDescription ?? 'HealthKit authorization failed')
+      options.fail?.(failure)
+      options.complete?.(failure)
+      return
+    }
+    const result: HealthAuthorizationSuccess = { errMsg: 'requestHealthAuthorization:ok' }
+    options.success?.(result)
+    options.complete?.(result)
+  })
+}
+
+export const queryWalkingRunningDistance: QueryWalkingRunningDistance = function (options: HealthDistanceOptions) {
+  if (!HKHealthStore.isHealthDataAvailable()) {
+    const error = nativeError(71001, 'HealthKit is unavailable on this device')
+    options.fail?.(error)
+    options.complete?.(error)
+    return
+  }
+
+  const distanceType = HKObjectType.quantityType(forIdentifier = HKQuantityTypeIdentifier.distanceWalkingRunning)
+  if (distanceType == null) {
+    const error = nativeError(71002, 'Unable to create walking and running distance type')
+    options.fail?.(error)
+    options.complete?.(error)
+    return
+  }
+
+  const startDate = new Date(timeIntervalSince1970 = options.startDateMs / 1000.0)
+  const endDate = new Date(timeIntervalSince1970 = options.endDateMs / 1000.0)
+  const predicate = HKQuery.predicateForSamples(
+    withStart = startDate,
+    end = endDate,
+    options = HKQueryOptions.strictStartDate
+  )
+  const query = new HKStatisticsQuery(
+    quantityType = distanceType as HKQuantityType,
+    quantitySamplePredicate = predicate,
+    options = HKStatisticsOptions.cumulativeSum,
+    completionHandler = (query, result, error) => {
+      if (error != null) {
+        const failure = nativeError(71004, error.localizedDescription)
+        options.fail?.(failure)
+        options.complete?.(failure)
+        return
+      }
+      const meters = result?.sumQuantity()?.doubleValue(for = HKUnit.meter()) ?? 0.0
+      const response: HealthDistanceSuccess = {
+        errMsg: 'queryWalkingRunningDistance:ok',
+        distanceKm: Math.max(0, meters / 1000.0)
+      }
+      options.success?.(response)
+      options.complete?.(response)
+    }
+  )
+  healthStore.execute(query)
+}

@@ -1,0 +1,8 @@
+export type HealthAuthorizationSuccess={errMsg:string}
+export type HealthDistanceSuccess={errMsg:string,distanceKm:number}
+export type HealthNativeError={errCode:number,errMsg:string}
+export type HealthAuthorizationOptions={success?:(result:HealthAuthorizationSuccess)=>void,fail?:(error:HealthNativeError)=>void,complete?:(result:any)=>void}
+export type HealthDistanceOptions={startDateMs:number,endDateMs:number,success?:(result:HealthDistanceSuccess)=>void,fail?:(error:HealthNativeError)=>void,complete?:(result:any)=>void}
+export type IsHealthDataAvailable=()=>boolean
+export type RequestHealthAuthorization=(options:HealthAuthorizationOptions)=>void
+export type QueryWalkingRunningDistance=(options:HealthDistanceOptions)=>void

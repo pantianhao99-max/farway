@@ -1,0 +1,9 @@
+{
+  "id":"faraway-healthkit",
+  "displayName":"Faraway HealthKit",
+  "version":"0.1.0",
+  "description":"Faraway 的 HealthKit 步行与跑步距离只读桥接",
+  "engines":{"HBuilderX":"^4.66.0"},
+  "dcloudext":{"type":"uts","declaration":{"ads":"无","data":"仅读取用户授权的步行与跑步距离，不上传数据","permissions":"HealthKit 只读权限"}},
+  "uni_modules":{"dependencies":[],"encrypt":[],"platforms":{"client":{"Vue":{"vue2":"n","vue3":"y"},"App":{"app-ios":{"minVersion":"13"},"app-android":"n"}}}}
+}

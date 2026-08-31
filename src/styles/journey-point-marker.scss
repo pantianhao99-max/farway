@@ -1,0 +1,50 @@
+.journey-point-marker {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.journey-point-marker__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(246, 243, 234, 0.82);
+  box-shadow: 0 2px 10px rgba(30, 40, 25, 0.18);
+}
+
+.journey-point-marker__core {
+  position: absolute;
+  inset: 3px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #71836b;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.journey-point-marker__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.journey-point-marker.is-unlocked .journey-point-marker__core,
+.journey-point-marker.is-walked .journey-point-marker__core {
+  background: #e88343;
+  box-shadow: 0 0 8px rgba(232, 131, 67, 0.4);
+}
+
+.journey-point-marker__pulse {
+  position: absolute;
+  inset: -3px;
+  border: 1px solid rgba(232, 131, 67, 0.4);
+  border-radius: 50%;
+  animation: journey-point-marker-pulse 2s ease-out infinite;
+}
+
+@keyframes journey-point-marker-pulse {
+  0% { transform: scale(0.8); opacity: 0.8; }
+  100% { transform: scale(1.6); opacity: 0; }
+}

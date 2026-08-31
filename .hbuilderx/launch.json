@@ -1,0 +1,12 @@
+{
+    "version" : "1.0",
+    "configurations" : [
+        {
+            "iOSProjectStandardBaseHistory" : {
+                "current" : "iOS_debug_5.24.ipa"
+            },
+            "playground" : "standard",
+            "type" : "uni-app:app-ios"
+        }
+    ]
+}
