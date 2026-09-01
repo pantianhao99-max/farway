@@ -18,6 +18,7 @@ const checkpointMarkers:Marker[]=[]
 let cameraFrame=0
 let displayedProgress=progress.value
 const CAMERA_DURATION=700
+const assetUrl=(path:string)=>`${import.meta.env.BASE_URL}${path.replace(/^\/+/, '')}`
 
 const lineFeature=(coordinates:LngLat[])=>({type:'Feature' as const,properties:{},geometry:{type:'LineString' as const,coordinates}})
 
@@ -118,12 +119,12 @@ onMounted(async()=>{
       // locally; map every other unavailable range to a valid bundled PBF so a
       // missing character can degrade to null without taking down the tile.
       if(resourceType==='Glyphs'&&url.includes('/static/maps/fonts/NotoSansRegular/')&&!/(?:0-255|256-511)\.pbf(?:$|\?)/.test(url)){
-        return {url:'/static/maps/fonts/NotoSansRegular/0-255.pbf'}
+        return {url:assetUrl('static/maps/fonts/NotoSansRegular/0-255.pbf')}
       }
       return {url}
     },
     attributionControl:false,
-    style:{version:8,glyphs:'/static/maps/fonts/{fontstack}/{range}.pbf',sources:{},layers:[{id:'sea',type:'background',paint:{'background-color':OSM_CARTO.background.water}}]}
+    style:{version:8,glyphs:assetUrl('static/maps/fonts/{fontstack}/{range}.pbf'),sources:{},layers:[{id:'sea',type:'background',paint:{'background-color':OSM_CARTO.background.water}}]}
   })
   map.on('error',(event:any)=>{
     if(event?.sourceId==='local-map'||String(event?.error?.message??'').includes('/static/maps/tiles/')){
@@ -134,13 +135,13 @@ onMounted(async()=>{
   map.on('load',async()=>{
     try{
       const [landResponse,versionResponse]=await Promise.all([
-        fetch('/static/maps/maclehose-land-v2.json'),
-        fetch('/static/maps/tiles/version.json',{cache:'no-store'})
+        fetch(assetUrl('static/maps/maclehose-land-v2.json')),
+        fetch(assetUrl('static/maps/tiles/version.json'),{cache:'no-store'})
       ])
       if(!landResponse.ok)throw new Error(`land map ${landResponse.status}`)
       const landMap=await landResponse.json()
       const tileRevision=versionResponse.ok?String((await versionResponse.json()).revision??'unknown'):'unknown'
-      const tileBase=new URL('/static/maps/tiles/',window.location.href).href
+      const tileBase=new URL(assetUrl('static/maps/tiles/'),window.location.origin).href
       map!.addSource('local-map',{type:'vector',tiles:[`${tileBase}{z}/{x}/{y}.pbf?v=${encodeURIComponent(tileRevision)}`],minzoom:8,maxzoom:14,bounds:[113.93,22.28,114.43,22.52],attribution:'© OpenStreetMap contributors'})
       map!.addSource('coastline-land',{type:'geojson',data:landMap})
       const nativeAddLayer=map!.addLayer.bind(map!)
@@ -182,12 +183,12 @@ onMounted(async()=>{
         map!.addImage(name,context.getImageData(0,0,rasterSize,rasterSize),{pixelRatio:patternPixelRatio})
       }
       await Promise.all([
-        addCartoPattern('osm-carto-peak','/static/maps/osm-carto-peak.svg',8),
-        addCartoPattern('osm-carto-forest-unknown','/static/maps/osm-carto-leaftype-unknown.svg',256),
-        addCartoPattern('osm-carto-forest-broadleaved','/static/maps/osm-carto-leaftype-broadleaved.svg',256),
-        addCartoPattern('osm-carto-forest-needleleaved','/static/maps/osm-carto-leaftype-needleleaved.svg',256),
-        addCartoPattern('osm-carto-forest-mixed','/static/maps/osm-carto-leaftype-mixed.svg',256),
-        addCartoPattern('osm-carto-scrub','/static/maps/osm-carto-scrub.png',512)
+        addCartoPattern('osm-carto-peak',assetUrl('static/maps/osm-carto-peak.svg'),8),
+        addCartoPattern('osm-carto-forest-unknown',assetUrl('static/maps/osm-carto-leaftype-unknown.svg'),256),
+        addCartoPattern('osm-carto-forest-broadleaved',assetUrl('static/maps/osm-carto-leaftype-broadleaved.svg'),256),
+        addCartoPattern('osm-carto-forest-needleleaved',assetUrl('static/maps/osm-carto-leaftype-needleleaved.svg'),256),
+        addCartoPattern('osm-carto-forest-mixed',assetUrl('static/maps/osm-carto-leaftype-mixed.svg'),256),
+        addCartoPattern('osm-carto-scrub',assetUrl('static/maps/osm-carto-scrub.png'),512)
       ])
       const forestFilter=['all',['==',['get','layer'],'area'],['in',['get','kind'],['literal',['wood','forest']]]] as any
       const missingLeafType=['!', ['in',['get','leaf_type'],['literal',['broadleaved','needleleaved','mixed']]]] as any
