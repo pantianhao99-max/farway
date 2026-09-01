@@ -8,6 +8,6 @@ export interface World { id:string; name:string; subtitle:string; description:st
 export interface WorldProgress { currentDistance:number; unlockedCheckpointIds:string[]; discoveries:DiscoveryRecord[]; presentedDiscoveryIds:string[]; discoveredChapterIds:string[]; totalDistanceWalked:number; settlementHistory:SettlementRecord[]; startedAt:string; completedAt?:string }
 export interface DiscoveryRecord { id:string; discoveredAt:string }
 export interface SettlementRecord { id:string; addedDistance:number; fromDistance:number; toDistance:number; createdAt:string }
-export interface JourneyState extends WorldProgress { activeWorldId:string; welcomed:boolean; sessionDistance:number; progressByWorld:Record<string,WorldProgress> }
+export interface JourneyState extends WorldProgress { activeWorldId:string; welcomed:boolean; sessionDistance:number; progressByWorld:Record<string,WorldProgress>; travelerId:string }
 export type JourneyEvent = { type:'move'; to:number } | { type:'checkpoint'; checkpoint:Checkpoint } | { type:'chapter'; chapter:Chapter } | { type:'complete' }
 export interface Settlement { id:string; addedDistance:number; fromDistance:number; toDistance:number; events:JourneyEvent[] }

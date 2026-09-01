@@ -13,9 +13,9 @@ export const OSM_CARTO={
   building:{fill:'#d9d0c9',lowZoomFill:'#d1c6bd',outline:'#b9a99c',fillOpacity:1,outlineOpacity:1,outlineWidth:.75,minZoom:14,outlineMinZoom:15},
   water:{fill:'#aad3df',line:'#aad3df',text:'#4d80b3'},
   road:{
-    motorway:{lowFill:'#e66e89',lowCasing:'#c24e6b',fill:'#e892a2',casing:'#dc2a67'},
-    trunk:{lowFill:'#f6967a',lowCasing:'#d1684a',fill:'#f9b29c',casing:'#c84e2f'},
-    primary:{lowFill:'#f4c37d',lowCasing:'#c78d2b',fill:'#fcd6a4',casing:'#a06b00'},
+    motorway:{lowFill:'#f8fac5',lowCasing:'#c24e6b',fill:'#f8fac5',casing:'#dc2a67'},
+    trunk:{lowFill:'#f8fac5',lowCasing:'#d1684a',fill:'#f8fac5',casing:'#c84e2f'},
+    primary:{lowFill:'#f8fac5',lowCasing:'#c78d2b',fill:'#f8fac5',casing:'#a06b00'},
     secondary:{lowFill:'#e7ed9d',lowCasing:'#a4b329',fill:'#f7fabf',casing:'#707d05'},
     tertiary:{fill:'#ffffff',casing:'#8f8f8f'},minor:{fill:'#ffffff',casing:'#bbbbbb'},
     livingStreet:{fill:'#ededed',casing:'#bbbbbb'},pedestrian:{fill:'#dddde8',casing:'#999999'},

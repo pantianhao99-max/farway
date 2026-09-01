@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { ArrowLeft, Clock3, Flag, Flame, Gauge, LocateFixed, MapPin, Mountain, Pause, Play, Route } from '@lucide/vue'
+import { ArrowLeft, Clock3, Flag, Flame, Footprints, Info, LocateFixed, MapPin, Pause, Play, Route } from '@lucide/vue'
 import { useJourneyStore } from '@/stores/journey'
 import JourneyMap from '@/components/JourneyMap.vue'
 import JourneySettlement from '@/components/JourneySettlement.vue'
@@ -64,12 +64,6 @@ const chapterEndpoints = computed(() => {
   return { from: nearest(journey.chapter.startDistance).name, to: nearest(journey.chapter.endDistance).name }
 })
 const chapterRouteLabel = computed(() => `${chapterLabel.value} · ${chapterEndpoints.value.from} → ${chapterEndpoints.value.to}`)
-const chapterDuration = computed(() => {
-  const minutes = Math.round(chapterDistance.value / 4.8 * 60)
-  const hours = Math.floor(minutes / 60)
-  const rest = minutes % 60
-  return hours ? `${hours}小时${rest ? `${rest}分` : ''}` : `${rest}分钟`
-})
 const elapsedSeconds = computed(() => {
   const end = pausedAt.value ?? clock.value
   return Math.max(0, Math.floor((end - sessionStartedAt.value - totalPausedMs.value) / 1000))
@@ -83,6 +77,7 @@ const elapsed = computed(() => {
 const pace = computed(() => '12:30')
 const chapterWalked = computed(() => Math.max(0, Math.min(chapterDistance.value, journey.displayDistance - journey.chapter.startDistance)))
 const calories = computed(() => Math.round(Math.max(0, journey.displayDistance) * 64))
+const steps = computed(() => Math.round(Math.max(0, journey.displayDistance) * 1000 / 0.75).toLocaleString())
 function openRestDrawer() {
   paused.value = true
   pausedAt.value = Date.now()
@@ -182,6 +177,14 @@ async function play() { await journey.play(); consumeHealthDistance() }
 function skipJourney() { journey.skipJourney(); consumeHealthDistance() }
 function closeSettlement() { journey.pendingSettlement = null; pendingHealthConsumption.value = 0 }
 function lockedToast() { uni.showToast({ title: '这片区域还没有开放。', icon: 'none' }) }
+function showMapAttribution() {
+  uni.showModal({
+    title: '地图数据来源',
+    content: '地图数据 © OpenStreetMap contributors\n采用 Open Database License（ODbL）许可\nopenstreetmap.org/copyright',
+    showCancel: false,
+    confirmText: '知道了'
+  })
+}
 function goBack() {
   const pages = getCurrentPages()
   if (pages.length > 1) uni.navigateBack()
@@ -198,19 +201,20 @@ function goBack() {
           <ArrowLeft :size="20" :stroke-width="1.8" />
         </button>
         <view class="header-left">
-          <text class="world serif">{{ journey.world.name }}</text>
-          <text class="chapter-route">{{ chapterRouteLabel }}</text>
-          <view class="chapter-metrics">
-            <view><Route :size="14" :stroke-width="1.8" /><text>{{ chapterDistance.toFixed(1) }} km</text></view>
-            <view><Mountain :size="14" :stroke-width="1.8" /><text>+{{ journey.chapter.elevationChange }} m</text></view>
-            <view><Clock3 :size="14" :stroke-width="1.8" /><text>{{ chapterDuration }}</text></view>
+          <view class="world-title-row">
+            <text class="world serif">{{ journey.world.name }}</text>
+            <button v-if="journey.world.assets.mapMode === 'osm'" class="map-attribution-button" aria-label="地图数据来源" @click="showMapAttribution">
+              <Info :size="14" :stroke-width="1.8" />
+            </button>
           </view>
+          <text class="chapter-route">{{ chapterRouteLabel }}</text>
         </view>
         <view class="header-right">
           <view class="distance-ring">
             <view class="ring-progress" :style="{ '--pct': progressPct + '%' }" />
             <view class="ring-inner">
               <b>{{ progressPct }}%</b>
+              <span>全程进度</span>
             </view>
           </view>
         </view>
@@ -218,6 +222,7 @@ function goBack() {
 
       <!-- 地图 -->
       <JourneyMap
+        :traveler-image="journey.selectedTraveler.image"
         ref="journeyMap"
         class="immersive-map"
         :world="journey.world"
@@ -254,16 +259,20 @@ function goBack() {
         </view>
         <view class="bottom-metrics">
           <view>
-            <view class="bottom-metric-label"><Clock3 :size="13" :stroke-width="2" />用时</view>
+            <view class="bottom-metric-label"><Footprints :size="13" :stroke-width="2" />步数</view>
+            <view><b>{{ steps }}</b><small>步</small></view>
+          </view>
+          <view>
+            <view class="bottom-metric-label"><Route :size="13" :stroke-width="2" />距离</view>
+            <view><b>{{ journey.displayDistance.toFixed(2) }}</b><small>km</small></view>
+          </view>
+          <view>
+            <view class="bottom-metric-label"><Clock3 :size="13" :stroke-width="2" />活动时长</view>
             <view><b>{{ elapsed }}</b></view>
           </view>
           <view>
             <view class="bottom-metric-label"><Flame :size="13" :stroke-width="2" />消耗</view>
             <view><b>{{ calories }}</b><small>kcal</small></view>
-          </view>
-          <view>
-            <view class="bottom-metric-label"><Gauge :size="13" :stroke-width="2" />速度</view>
-            <view><b>4.8</b><small>km/h</small></view>
           </view>
         </view>
       </view>
@@ -307,7 +316,7 @@ function goBack() {
             <view class="rest-sun" />
             <view class="rest-mountain back" />
             <view class="rest-mountain front" />
-            <image v-if="journey.world.assets.travelerImage" :src="journey.world.assets.travelerImage" mode="contain" />
+            <image :src="journey.selectedTraveler.image" mode="contain" />
           </view>
           <text class="rest-title">在这里歇一会儿。</text>
           <text class="rest-subtitle">你已经走了很棒的路程！</text>
@@ -1391,40 +1400,40 @@ header {
 
 /* Route title fades into the full-screen map beneath it. */
 .walk-header {
-  min-height: 132px;
+  min-height: 106px;
   align-items: start;
-  padding-bottom: 32px;
-  background: linear-gradient(180deg, rgba(246, 243, 234, .98) 0%, rgba(246, 243, 234, .9) 68%, rgba(246, 243, 234, 0) 100%);
+  padding-bottom: 20px;
+  background: linear-gradient(180deg, rgba(246, 243, 234, .58) 0%, rgba(246, 243, 234, .22) 72%, rgba(246, 243, 234, 0) 100%);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   overflow: visible;
 }
 .header-left { padding-top: 1px; overflow: visible; }
+.world-title-row { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .world { font-size: 25px; }
+.map-attribution-button { flex: 0 0 24px; width: 24px; height: 24px; min-height: 24px; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(83, 97, 82, .18); border-radius: 50%; color: #657164; background: rgba(255, 255, 255, .42); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.map-attribution-button::after { display: none; }
 .chapter-route {
-  display: block;
-  margin-top: 2px;
+  display: inline-flex;
+  max-width: 100%;
+  margin-top: 7px;
+  padding: 5px 10px;
   overflow: hidden;
-  color: #667064;
+  border: 1px solid rgba(255, 255, 255, .42);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .38);
+  color: #5e695d;
   font-size: 12px;
   line-height: 17px;
   text-overflow: ellipsis;
   white-space: nowrap;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
-.chapter-metrics {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-top: 9px;
-  color: #4e5c4d;
-}
-.chapter-metrics > view { display: flex; align-items: center; gap: 4px; min-width: 0; }
-.chapter-metrics svg { flex: 0 0 auto; }
-.chapter-metrics > view:nth-child(1) svg { color: #d87942; }
-.chapter-metrics > view:nth-child(2) svg { color: #5f8463; }
-.chapter-metrics > view:nth-child(3) svg { color: #647f98; }
-.chapter-metrics text { font-size: 10px; line-height: 14px; white-space: nowrap; }
-.header-right { padding-top: 1px; }
+.header-right { display: flex; flex-direction: column; align-items: center; padding-top: 0; }
+.header-right .ring-inner { background: rgba(250, 249, 244, .96); box-shadow: 0 2px 8px rgba(42, 55, 43, .12); }
+.header-right .ring-inner b { font-size: 13px; }
+.header-right .ring-inner span { color: #747d73; font-size: 7px; line-height: 9px; white-space: nowrap; }
 
 .rest-overlay {
   position: fixed;
@@ -1472,9 +1481,7 @@ header {
 @keyframes rest-fade { from { opacity: 0; } }
 @keyframes rest-up { from { opacity: .7; transform: translateY(36px); } }
 @media (max-width: 359px) {
-  .walk-header { min-height: 126px; padding-inline: 10px; }
-  .chapter-metrics { gap: 8px; }
-  .chapter-metrics text { font-size: 9px; }
+  .walk-header { min-height: 102px; padding-inline: 10px; }
 }
 </style>
 <style scoped>
@@ -1559,16 +1566,17 @@ header {
 .route-pill-item:last-child :deep(svg) { color: #6c9a72; }
 .route-pill-item b { color: #394b3d; font-size: 11px; font-weight: 600; }
 .route-pill-divider { width: 1px; height: 17px; background: #ded8cc; }
-.bottom-metrics { max-width: 400px; height: 77px; margin: 0 auto; padding: 16px 0 0; display: grid; grid-template-columns: 1.25fr .875fr .875fr; border-top: 1px solid #eee9df; }
-.bottom-metrics > view { min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 0 13px; text-align: center; }
+.bottom-metrics { max-width: 400px; height: 77px; margin: 0 auto; padding: 16px 0 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid #eee9df; }
+.bottom-metrics > view { min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 0 6px; text-align: center; }
 .bottom-metrics > view + view { position: relative; }
 .bottom-metrics > view + view::before { content: ''; position: absolute; left: 0; top: 3px; width: 1px; height: 36px; background: #ebe6dc; }
 .bottom-metric-label { min-height: 16px; margin-bottom: 5px; display: flex; align-items: center; justify-content: center; gap: 4px; color: #777d76; font-size: 10px; }
 .bottom-metrics > view:nth-child(1) .bottom-metric-label { color: #63906d; }
 .bottom-metrics > view:nth-child(2) .bottom-metric-label { color: #ef7c29; }
 .bottom-metrics > view:nth-child(3) .bottom-metric-label { color: #4f88b8; }
-.bottom-metrics b { font: 500 19px/1.1 var(--font-sans); color: #28422f; }
-.bottom-metrics > view:first-child b { display: inline-block; width: 92px; text-align: center; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+.bottom-metrics > view:nth-child(4) .bottom-metric-label { color: #9a7650; }
+.bottom-metrics b { font: 500 17px/1.1 var(--font-sans); color: #28422f; white-space: nowrap; }
+.bottom-metrics > view:first-child b { display: inline-block; text-align: center; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
 .bottom-metrics small { margin-left: 5px; color: #81877f; font-size: 9px; }
 .dev-panel { bottom: calc(318px + env(safe-area-inset-bottom)); }
 @media (max-height: 720px) {

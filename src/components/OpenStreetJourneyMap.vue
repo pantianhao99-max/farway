@@ -7,7 +7,7 @@ import routeSource from '@/data/worlds/maclehose-route.json'
 import { createGeoRouteGeometry, type LngLat } from '@/services/journey/GeoRouteGeometry'
 import { OSM_CARTO, OSM_CARTO_ZOOM_OFFSET } from '@/services/journey/OsmCartoTheme'
 
-const props=defineProps<{world:World;distance:number;unlocked:string[];follow:boolean}>()
+const props=defineProps<{world:World;distance:number;unlocked:string[];follow:boolean;travelerImage?:string|null}>()
 const container=ref<any>(null)
 const mapReady=ref(false)
 const geometry=createGeoRouteGeometry(routeSource as any)
@@ -111,20 +111,26 @@ onMounted(async()=>{
     center:geometry.pointAt(progress.value),zoom:12.5,
     fadeDuration:0,maxTileCacheZoomLevels:2,refreshExpiredTiles:false,renderWorldCopies:false,
     localIdeographFontFamily:'Noto Sans SC',
+    transformRequest:(url,resourceType)=>{
+      // A static SPA server commonly answers an unknown glyph range with its
+      // HTML fallback. MapLibre then parses that HTML as protobuf and aborts
+      // symbol preparation for the whole vector tile. CJK glyphs are rendered
+      // locally; map every other unavailable range to a valid bundled PBF so a
+      // missing character can degrade to null without taking down the tile.
+      if(resourceType==='Glyphs'&&url.includes('/static/maps/fonts/NotoSansRegular/')&&!/(?:0-255|256-511)\.pbf(?:$|\?)/.test(url)){
+        return {url:'/static/maps/fonts/NotoSansRegular/0-255.pbf'}
+      }
+      return {url}
+    },
     attributionControl:false,
     style:{version:8,glyphs:'/static/maps/fonts/{fontstack}/{range}.pbf',sources:{},layers:[{id:'sea',type:'background',paint:{'background-color':OSM_CARTO.background.water}}]}
   })
-  ;(window as any).__farwayDebugMap=map
   map.on('error',(event:any)=>{
     if(event?.sourceId==='local-map'||String(event?.error?.message??'').includes('/static/maps/tiles/')){
       const tile=event?.tile?.tileID?.canonical
       console.warn(`[Faraway] 矢量地图瓦片加载失败：${event?.error?.message??'未知错误'}${tile?` (z${tile.z}/${tile.x}/${tile.y})`:''}`)
     }
   })
-  map.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right')
-  // Keep the required OSM credit visible without MapLibre's black compact
-  // information button overlapping the journey UI.
-  map.addControl(new maplibregl.AttributionControl({compact:false}),'bottom-right')
   map.on('load',async()=>{
     try{
       const [landResponse,versionResponse]=await Promise.all([
@@ -320,9 +326,12 @@ onMounted(async()=>{
     })
     const avatarElement=markerElement('osm-avatar')
     avatarElement.style.cssText='width:70px;height:74px;display:block;filter:drop-shadow(0 3px 4px rgba(28,39,30,.32));'
-    const image=document.createElement('img');image.src=props.world.assets.travelerImage??'/static/worlds/traveler.png';image.alt='旅行者';image.width=70;image.height=70;image.style.cssText='display:block;width:70px;height:70px;max-width:70px;max-height:70px;object-fit:contain;';avatarElement.appendChild(image)
+    const image=document.createElement('img');image.src=props.travelerImage??props.world.assets.travelerImage??'/static/worlds/traveler.png';image.alt='旅行者';image.width=70;image.height=70;image.style.cssText='display:block;width:70px;height:70px;max-width:70px;max-height:70px;object-fit:contain;';avatarElement.appendChild(image)
     avatar=new maplibregl.Marker({element:avatarElement,anchor:'bottom'}).setLngLat(geometry.pointAt(progress.value)).addTo(map!)
-    map!.once('idle',()=>{mapReady.value=true})
+    // Do not keep the whole canvas transparent until every dense vector tile
+    // has completed symbol placement. Reveal the map now and let MapLibre
+    // progressively paint landcover, textures, and labels while panning.
+    mapReady.value=true
   })
 })
 
@@ -338,7 +347,6 @@ onUnmounted(()=>{if(typeof cancelAnimationFrame==='function')cancelAnimationFram
 .osm-map{position:absolute;inset:0;opacity:0;transition:opacity .18s ease-out}
 .osm-map.is-ready{opacity:1}
 .osm-map .maplibregl-canvas{outline:none}
-.osm-map .maplibregl-ctrl-attrib{font-size:10px;background:rgba(248,246,238,.84)}
 .osm-checkpoint-label{display:block;padding:1px 3px;border-radius:5px;background-color:rgba(248,246,238,.84);color:#405145;font:600 11px/1.2 var(--font-sans,"PingFang SC","Microsoft YaHei",sans-serif);white-space:nowrap;box-shadow:0 1px 3px rgba(25,38,29,.11);pointer-events:none;isolation:isolate;backface-visibility:hidden}
 .osm-checkpoint-label.is-section-boundary{z-index:2;padding:2px 4px;background:rgba(248,246,238,.96);color:#26382d;font-size:12px;font-weight:750;box-shadow:0 2px 7px rgba(25,38,29,.2)}
 .osm-avatar{width:70px;height:74px;filter:drop-shadow(0 3px 4px rgba(28,39,30,.32))}

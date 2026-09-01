@@ -10,7 +10,7 @@ import type { Checkpoint } from '@/types/journey'
 import { distanceFormatter } from '@/services/journey/DistanceFormatter'
 import '@/styles/journey-point-marker.scss'
 
-const props = defineProps<{ world: World; distance: number; unlocked: string[] }>()
+const props = defineProps<{ world: World; distance: number; unlocked: string[]; travelerImage?: string | null }>()
 const emit = defineEmits<{ lockChange:[locked:boolean] }>()
 
 const scrollTop = ref(0)
@@ -328,7 +328,7 @@ onUnmounted(() => {
         :style="{ left: (avatar.x * 100) + '%', bottom: mapBottom(avatar.y) + 'px' }"
       >
         <view class="avatar-position-dot" aria-hidden="true" />
-        <JourneyAvatar :image-asset="world.assets.travelerImage" />
+        <JourneyAvatar :image-asset="travelerImage ?? world.assets.travelerImage" />
       </view>
       </view>
     <view class="zoom-controls">
@@ -337,7 +337,7 @@ onUnmounted(() => {
       <button aria-label="缩小地图" @click="setZoom(zoom - 0.2)">−</button>
     </view>
   </view>
-  <OpenStreetJourneyMap v-else :world="world" :distance="distance" :unlocked="unlocked" :follow="viewLocked" />
+  <OpenStreetJourneyMap v-else :world="world" :distance="distance" :unlocked="unlocked" :follow="viewLocked" :traveler-image="travelerImage" />
 </template>
 
 <style scoped lang="scss">

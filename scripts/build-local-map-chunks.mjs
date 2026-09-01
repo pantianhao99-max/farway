@@ -19,7 +19,9 @@ const cartoPeakName=properties=>{
 const normalizeMapText=value=>typeof value==='string'
   ? value.normalize('NFKC').replace(/[\u200B-\u200D\u2060\uFE00-\uFE0F\uFEFF]/g,'')
   : value
-const input={...sourceInput,features:sourceInput.features.map((feature,sourceRank)=>{
+const input={...sourceInput,features:sourceInput.features.filter(feature=>
+  feature.properties?.kind!=='peak'||Boolean(feature.properties?.name)
+).map((feature,sourceRank)=>{
   const properties=Object.fromEntries(
     Object.entries(feature.properties??{}).map(([key,value])=>[key,normalizeMapText(value)])
   )
@@ -34,20 +36,47 @@ const outputRoot=path.join(root,'src/static/maps/tiles')
 const legacyRoot=path.join(root,'src/static/maps/chunks')
 const lonToX=(lon,zoom)=>Math.floor((lon+180)/360*2**zoom)
 const latToY=(lat,zoom)=>Math.floor((1-Math.asinh(Math.tan(lat*Math.PI/180))/Math.PI)/2*2**zoom)
+const ringAreaM2=ring=>{
+  if(!Array.isArray(ring)||ring.length<3)return 0
+  const latitude=ring.reduce((sum,point)=>sum+point[1],0)/ring.length
+  const xScale=111320*Math.cos(latitude*Math.PI/180),yScale=111320
+  let twiceArea=0
+  for(let index=0,previous=ring.length-1;index<ring.length;previous=index++){
+    twiceArea+=(ring[previous][0]*xScale)*(ring[index][1]*yScale)-(ring[index][0]*xScale)*(ring[previous][1]*yScale)
+  }
+  return Math.abs(twiceArea)/2
+}
+const geometryAreaM2=geometry=>{
+  const polygonArea=rings=>Math.max(0,ringAreaM2(rings[0])-rings.slice(1).reduce((sum,ring)=>sum+ringAreaM2(ring),0))
+  if(geometry?.type==='Polygon')return polygonArea(geometry.coordinates)
+  if(geometry?.type==='MultiPolygon')return geometry.coordinates.reduce((sum,rings)=>sum+polygonArea(rings),0)
+  return 0
+}
+const areaMinimumZoom=feature=>{
+  const area=geometryAreaM2(feature.geometry)
+  // Carto filters landcover by way_area > one rendered pixel. Its z0 uses
+  // 256 px while MapLibre uses 512 px, hence official zoom = local zoom + 1.
+  for(let zoom=8;zoom<=14;zoom++){
+    const metresPerPixel=40075016.686/(256*2**(zoom+1))
+    if(area>metresPerPixel**2)return zoom
+  }
+  return 14
+}
 const minimumZoomFor=feature=>{
   const {layer,kind}=feature.properties??{}
   if(layer==='building')return 13
   if(layer==='road'){
     if(['path','footway','steps'].includes(kind))return 13
     if(['track','cycleway'].includes(kind))return 12
-    if(['service','residential','unclassified','living_street','pedestrian'].includes(kind))return 11
+    if(kind==='service')return 13
+    if(['residential','unclassified','living_street','pedestrian'].includes(kind))return 11
     if(['motorway','trunk','primary'].includes(kind))return 8
     if(kind==='secondary')return 9
     return 10
   }
   if(layer==='waterway'){
-    if(['ditch','drain'].includes(kind))return 12
-    if(kind==='stream')return 12
+    if(['ditch','drain'].includes(kind))return 11
+    if(kind==='stream')return 11
     if(kind==='canal')return 11
     return kind==='river'?10:99
   }
@@ -60,7 +89,13 @@ const minimumZoomFor=feature=>{
     if(['neighbourhood','isolated_dwelling','farm'].includes(kind))return 14
     return 99
   }
-  return layer==='area'?8:99
+  if(layer==='area'){
+    const styleMinimum=kind==='parking'?13:
+      ['playground','place_of_worship'].includes(kind)?12:
+      ['school','university','hospital','pitch','sports_centre','cemetery','quarry','recreation_ground'].includes(kind)?9:8
+    return Math.max(styleMinimum,areaMinimumZoom(feature))
+  }
+  return 99
 }
 
 await fs.rm(outputRoot,{recursive:true,force:true})
