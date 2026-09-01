@@ -327,7 +327,7 @@ onMounted(async()=>{
     })
     const avatarElement=markerElement('osm-avatar')
     avatarElement.style.cssText='width:70px;height:74px;display:block;filter:drop-shadow(0 3px 4px rgba(28,39,30,.32));'
-    const image=document.createElement('img');image.src=props.travelerImage??props.world.assets.travelerImage??'/static/worlds/traveler.png';image.alt='旅行者';image.width=70;image.height=70;image.style.cssText='display:block;width:70px;height:70px;max-width:70px;max-height:70px;object-fit:contain;';avatarElement.appendChild(image)
+    const image=document.createElement('img');image.src=props.travelerImage??props.world.assets.travelerImage??assetUrl('static/worlds/traveler.png');image.alt='旅行者';image.width=70;image.height=70;image.style.cssText='display:block;width:70px;height:70px;max-width:70px;max-height:70px;object-fit:contain;';avatarElement.appendChild(image)
     avatar=new maplibregl.Marker({element:avatarElement,anchor:'bottom'}).setLngLat(geometry.pointAt(progress.value)).addTo(map!)
     // Do not keep the whole canvas transparent until every dense vector tile
     // has completed symbol placement. Reveal the map now and let MapLibre

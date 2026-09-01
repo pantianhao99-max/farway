@@ -1,6 +1,6 @@
 {
   "id":"maclehose-trail","name":"麦理浩径","subtitle":"从山海之间走到屯门","description":"从北潭涌出发，越过水库、海湾、群峰与林地，沿香港最长的远足故事一路向西。","totalDistance":100,
-  "assets":{"mapImage":null,"coverImage":"/static/worlds/cover-maclehose.png","travelerImage":"/static/worlds/traveler.png","mapAspectRatio":0.75,"mapMode":"osm"},
+  "assets":{"mapImage":null,"coverImage":"static/worlds/cover-maclehose.png","travelerImage":"static/worlds/traveler.png","mapAspectRatio":0.75,"mapMode":"osm"},
   "theme":{"paper":"#F3F1E8","ink":"#18231F","forest":"#315E52","accent":"#D87942"},
   "chapters":[
     {"id":"ml-section-1","number":1,"name":"万宜水库","startDistance":0,"endDistance":10,"elevationChange":420,"atmosphere":"水库与海在山脊两侧交换着蓝色。","colors":["#b8d4cf","#7ca59c"]},
