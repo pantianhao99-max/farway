@@ -1,3 +1,5 @@
+import { publicAssetUrl } from '@/services/presentation/publicAsset'
+
 export interface TravelerOption {
   id: string
   name: string
@@ -8,7 +10,7 @@ export interface TravelerOption {
 export const DEFAULT_TRAVELER_ID = 'faraway-traveler'
 
 export const travelerOptions: TravelerOption[] = [
-  { id: DEFAULT_TRAVELER_ID, name: '远方旅人', description: '背起行囊，一起走向远方', image: 'static/worlds/traveler.png' }
+  { id: DEFAULT_TRAVELER_ID, name: '远方旅人', description: '背起行囊，一起走向远方', image: publicAssetUrl('static/worlds/traveler.png') }
 ]
 
 export function travelerById(id?: string): TravelerOption {

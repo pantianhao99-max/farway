@@ -29,7 +29,7 @@ const restDrawerOpen = ref(false)
 const pausedAt = ref<number | null>(null)
 const totalPausedMs = ref(0)
 
-const debugEnabled = import.meta.env.DEV
+const debugEnabled = import.meta.env.DEV || import.meta.env.VITE_APP_DEBUG === 'true'
 
 const nextLabel = computed(() => {
   const n = journey.nextCheckpoint
@@ -232,12 +232,14 @@ function goBack() {
       />
 
       <view class="journey-bottom-card">
-        <button v-if="debugEnabled" class="bottom-side-button debug" :class="{ active: devOpen }" @click="devOpen = !devOpen">调试</button>
+        <view class="bottom-side-controls">
+          <button v-if="debugEnabled" class="bottom-side-button debug" :class="{ active: devOpen }" @click="devOpen = !devOpen">调试</button>
+          <button class="bottom-side-button locate" :class="{ active: mapViewLocked }" aria-label="定位锁定" @click="journeyMap?.toggleViewLock()">
+            <LocateFixed :size="20" :stroke-width="2.2" />
+          </button>
+        </view>
         <button class="bottom-pause-button" aria-label="休息一下" @click="openRestDrawer">
           <Pause :size="27" :stroke-width="2.8" fill="currentColor" />
-        </button>
-        <button class="bottom-side-button locate" :class="{ active: mapViewLocked }" aria-label="定位锁定" @click="journeyMap?.toggleViewLock()">
-          <LocateFixed :size="20" :stroke-width="2.2" />
         </button>
 
         <text class="bottom-distance-label">今日行走</text>
@@ -1540,8 +1542,6 @@ header {
   box-shadow: 0 8px 20px rgba(224,107,31,.34), inset 0 1px 5px rgba(255,255,255,.46);
 }
 .bottom-side-button {
-  position: absolute;
-  top: -55px;
   width: 46px;
   height: 46px;
   padding: 0;
@@ -1553,8 +1553,8 @@ header {
   background: rgba(255,252,245,.96);
   box-shadow: 0 5px 15px rgba(39,52,40,.16);
 }
-.bottom-side-button.debug { left: 20px; font-size: 10px; }
-.bottom-side-button.locate { right: 20px; }
+.bottom-side-controls { position: absolute; top: -111px; right: 20px; display: flex; flex-direction: column; gap: 10px; }
+.bottom-side-button.debug { font-size: 10px; }
 .bottom-side-button.active { color: white; background: #e88343; }
 .bottom-distance-label { display: block; text-align: center; color: #767b74; font-size: 12px; }
 .bottom-distance-reading { height: 78px; display: flex; align-items: baseline; justify-content: center; gap: 9px; }

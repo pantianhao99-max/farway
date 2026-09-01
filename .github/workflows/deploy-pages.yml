@@ -35,6 +35,8 @@ jobs:
 
       - name: Build H5 site
         run: npm run build:h5
+        env:
+          VITE_APP_DEBUG: 'true'
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
