@@ -9,7 +9,8 @@ import { journeyStorage } from '@/services/storage'
 import { DEFAULT_TRAVELER_ID, travelerById } from '@/data/travelers'
 
 const initialProgress=(world:World):WorldProgress=>({currentDistance:0,unlockedCheckpointIds:[world.checkpoints[0].id],discoveries:[{id:world.checkpoints[0].id,discoveredAt:new Date().toISOString()}],presentedDiscoveryIds:[world.checkpoints[0].id],discoveredChapterIds:[world.chapters[0].id],totalDistanceWalked:0,settlementHistory:[],startedAt:new Date().toISOString()})
-const initialState=():JourneyState=>({activeWorldId:'misty-journey',...initialProgress(worldRepository.get('misty-journey')),welcomed:false,sessionDistance:0,progressByWorld:{},travelerId:DEFAULT_TRAVELER_ID})
+const DEFAULT_WORLD_ID='maclehose-trail'
+const initialState=():JourneyState=>({activeWorldId:DEFAULT_WORLD_ID,...initialProgress(worldRepository.get(DEFAULT_WORLD_ID)),welcomed:false,sessionDistance:0,progressByWorld:{},travelerId:DEFAULT_TRAVELER_ID})
 
 export const useJourneyStore=defineStore('journey',()=>{
   const state=reactive<JourneyState>(initialState())
@@ -29,7 +30,21 @@ export const useJourneyStore=defineStore('journey',()=>{
   const selectedTraveler=computed(()=>travelerById(state.travelerId))
 
   function normalizeProgress(progress:WorldProgress, itemWorld:World):WorldProgress { const fallback=initialProgress(itemWorld); return {...fallback,...progress,unlockedCheckpointIds:[...new Set(progress.unlockedCheckpointIds??fallback.unlockedCheckpointIds)],discoveries:progress.discoveries??[],presentedDiscoveryIds:progress.presentedDiscoveryIds??(progress.discoveries??[]).map(item=>item.id),discoveredChapterIds:progress.discoveredChapterIds??fallback.discoveredChapterIds,settlementHistory:progress.settlementHistory??[]} }
-  function hydrate(){ const saved=journeyStorage.load(); if(saved){const activeWorld=worldRepository.get(saved.activeWorldId);const normalized=normalizeProgress(saved,activeWorld);const progressByWorld=Object.fromEntries(Object.entries(saved.progressByWorld??{}).map(([id,item])=>[id,normalizeProgress(item,worldRepository.get(id))]));Object.assign(state,normalized,{welcomed:saved.welcomed??false,activeWorldId:saved.activeWorldId,sessionDistance:saved.sessionDistance??0,progressByWorld,travelerId:travelerById(saved.travelerId).id})} displayDistance.value=state.currentDistance }
+  function hydrate(){
+    const saved=journeyStorage.load()
+    if(saved){
+      const availableWorlds=worldRepository.getAll()
+      const activeWorld=availableWorlds.find(item=>item.id===saved.activeWorldId)??worldRepository.get(DEFAULT_WORLD_ID)
+      const savedProgress=saved.activeWorldId===activeWorld.id?saved:saved.progressByWorld?.[activeWorld.id]
+      const normalized=normalizeProgress(savedProgress??initialProgress(activeWorld),activeWorld)
+      const progressByWorld=Object.fromEntries(Object.entries(saved.progressByWorld??{}).flatMap(([id,item])=>{
+        const itemWorld=availableWorlds.find(world=>world.id===id)
+        return itemWorld?[[id,normalizeProgress(item,itemWorld)]]:[]
+      }))
+      Object.assign(state,normalized,{welcomed:saved.welcomed??false,activeWorldId:activeWorld.id,sessionDistance:saved.sessionDistance??0,progressByWorld,travelerId:travelerById(saved.travelerId).id})
+    }
+    displayDistance.value=state.currentDistance
+  }
   function persist(){ journeyStorage.save(state) }
   function setWelcomed(){state.welcomed=true;persist()}
   function selectTraveler(id:string){state.travelerId=travelerById(id).id;persist()}

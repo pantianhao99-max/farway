@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
 const load = name => JSON.parse(readFileSync(new URL(`../src/data/worlds/${name}`, import.meta.url), 'utf8'))
-const worlds = [load('misty-journey.json'), load('maclehose-trail.json')]
+const worlds = [load('maclehose-trail.json')]
 
 function crossed(world, from, to, unlocked = []) {
   return world.checkpoints
@@ -33,9 +33,7 @@ for (const world of worlds) {
   assert.equal(Math.min(world.totalDistance, 98 + 10), 100, `${world.id}: completion cap`)
 }
 
-const misty = worlds[0]
-assert.deepEqual(crossed(misty, 8.2, 13.2).map(p => p.distance), [11.6], '8.2 → 13.2 checkpoint resolution')
-const mac = worlds[1]
+const mac = worlds[0]
 assert.equal(mac.chapters.length, 10, 'MacLehose has ten sections')
 assert.deepEqual(crossed(mac, 8, 18).map(p => p.distance), [8.8, 10, 14.1, 17], 'MacLehose multi-checkpoint order')
 

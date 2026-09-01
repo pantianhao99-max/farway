@@ -385,8 +385,8 @@ function goBack() {
 
       <view class="welcome-copy" v-else>
         <text class="eyebrow">第一站</text>
-        <text class="welcome-title serif">雾境远征</text>
-        <text class="welcome-desc">100 公里 · 穿过森林和雪山<br />一路前往世界尽头。</text>
+        <text class="welcome-title serif">{{ journey.world.name }}</text>
+        <text class="welcome-desc">{{ journey.world.description }}</text>
         <button class="primary-button" @click="start">出发</button>
         <button class="preview-link" @click="lockedToast">一张地图，等待展开</button>
       </view>
