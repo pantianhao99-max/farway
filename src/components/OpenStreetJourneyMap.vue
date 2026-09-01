@@ -6,6 +6,7 @@ import type { World } from '@/types/journey'
 import routeSource from '@/data/worlds/maclehose-route.json'
 import { createGeoRouteGeometry, type LngLat } from '@/services/journey/GeoRouteGeometry'
 import { OSM_CARTO, OSM_CARTO_ZOOM_OFFSET } from '@/services/journey/OsmCartoTheme'
+import { travelerDirectionAsset, travelerDirectionAt } from '@/services/journey/TravelerDirection'
 
 const props=defineProps<{world:World;distance:number;unlocked:string[];follow:boolean;travelerImage?:string|null}>()
 const container=ref<any>(null)
@@ -14,6 +15,7 @@ const geometry=createGeoRouteGeometry(routeSource as any)
 const progress=computed(()=>props.world.totalDistance?Math.max(0,Math.min(1,props.distance/props.world.totalDistance)):0)
 let map:MapLibreMap|undefined
 let avatar:Marker|undefined
+let avatarImage:HTMLImageElement|undefined
 const checkpointMarkers:Marker[]=[]
 let cameraFrame=0
 let displayedProgress=progress.value
@@ -96,6 +98,7 @@ function updateProgress(){
     displayedProgress=from+(to-from)*eased
     const point=geometry.pointAt(displayedProgress)
     avatar?.setLngLat(point)
+    if(avatarImage)avatarImage.src=travelerDirectionAsset(travelerDirectionAt(displayedProgress,p=>{const point=geometry.pointAt(p);return{x:point[0],y:point[1]}}))
     if(props.follow)map?.jumpTo({center:point})
     if(t<1)cameraFrame=requestAnimationFrame(animate)
   }
@@ -327,7 +330,7 @@ onMounted(async()=>{
     })
     const avatarElement=markerElement('osm-avatar')
     avatarElement.style.cssText='width:70px;height:74px;display:block;filter:drop-shadow(0 3px 4px rgba(28,39,30,.32));'
-    const image=document.createElement('img');image.src=props.travelerImage??props.world.assets.travelerImage??assetUrl('static/worlds/traveler.png');image.alt='旅行者';image.width=70;image.height=70;image.style.cssText='display:block;width:70px;height:70px;max-width:70px;max-height:70px;object-fit:contain;';avatarElement.appendChild(image)
+    const image=document.createElement('img');image.src=travelerDirectionAsset(travelerDirectionAt(progress.value,p=>{const point=geometry.pointAt(p);return{x:point[0],y:point[1]}}));image.alt='旅行者';image.width=70;image.height=70;image.style.cssText='display:block;width:70px;height:70px;max-width:70px;max-height:70px;object-fit:contain;';avatarElement.appendChild(image);avatarImage=image
     avatar=new maplibregl.Marker({element:avatarElement,anchor:'bottom'}).setLngLat(geometry.pointAt(progress.value)).addTo(map!)
     // Do not keep the whole canvas transparent until every dense vector tile
     // has completed symbol placement. Reveal the map now and let MapLibre
@@ -338,7 +341,7 @@ onMounted(async()=>{
 
 watch(progress,updateProgress)
 watch(()=>props.follow,following=>{if(following&&map)map.easeTo({center:geometry.pointAt(displayedProgress),duration:500,easing:t=>1-Math.pow(1-t,3)})})
-onUnmounted(()=>{if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(cameraFrame);checkpointMarkers.forEach(marker=>marker.remove());avatar?.remove();map?.remove()})
+onUnmounted(()=>{if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(cameraFrame);checkpointMarkers.forEach(marker=>marker.remove());avatar?.remove();avatarImage=undefined;map?.remove()})
 </script>
 
 <template><view class="osm-map-shell"><view ref="container" class="osm-map" :class="{'is-ready':mapReady}" /></view></template>

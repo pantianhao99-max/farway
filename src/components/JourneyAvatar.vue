@@ -1,10 +1,14 @@
 <script setup lang="ts">
-defineProps<{ imageAsset: string | null }>()
+import { computed } from 'vue'
+import { travelerDirectionAsset, type TravelerDirection } from '@/services/journey/TravelerDirection'
+
+const props = defineProps<{ imageAsset: string | null; direction?: TravelerDirection }>()
+const displayedAsset = computed(() => props.direction ? travelerDirectionAsset(props.direction) : props.imageAsset)
 </script>
 
 <template>
   <view class="traveler" aria-label="当前人物">
-    <image v-if="imageAsset" class="traveler-image" :src="imageAsset" mode="aspectFit" />
+    <image v-if="displayedAsset" class="traveler-image" :src="displayedAsset" mode="aspectFit" />
     <view v-else class="traveler-fallback" aria-hidden="true" />
   </view>
 </template>

@@ -8,6 +8,7 @@ import { createRouteGeometry } from '@/services/journey/RouteGeometry'
 import { placeNodeLabels, type NodeLabelPlacement } from '@/services/journey/NodeLabelPlacement'
 import type { Checkpoint } from '@/types/journey'
 import { distanceFormatter } from '@/services/journey/DistanceFormatter'
+import { travelerDirectionAt } from '@/services/journey/TravelerDirection'
 import '@/styles/journey-point-marker.scss'
 
 const props = defineProps<{ world: World; distance: number; unlocked: string[]; travelerImage?: string | null }>()
@@ -47,6 +48,7 @@ const mapTop = (y: number) => mapHeight.value - mapBottom(y)
 const routeGeometry = computed(() => createRouteGeometry(props.world.pathPoints, props.world.routeSvgSegments))
 const routeProgress = computed(() => props.world.totalDistance > 0 ? Math.min(1, Math.max(0, props.distance / props.world.totalDistance)) : 0)
 const avatarTarget = computed(() => routeGeometry.value.pointAt(routeProgress.value))
+const avatarDirection = computed(() => travelerDirectionAt(routeProgress.value, routeGeometry.value.pointAt))
 const avatar = ref(avatarTarget.value)
 let followFrame = 0
 const CAMERA_DURATION = 700
@@ -328,7 +330,7 @@ onUnmounted(() => {
         :style="{ left: (avatar.x * 100) + '%', bottom: mapBottom(avatar.y) + 'px' }"
       >
         <view class="avatar-position-dot" aria-hidden="true" />
-        <JourneyAvatar :image-asset="travelerImage ?? world.assets.travelerImage" />
+        <JourneyAvatar :image-asset="travelerImage ?? world.assets.travelerImage" :direction="avatarDirection" />
       </view>
       </view>
     <view class="zoom-controls">

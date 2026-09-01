@@ -123,6 +123,7 @@ function stopDevWalk() {
   devWalking.value = false
 }
 function toggleDevWalk() {
+  devOpen.value = false
   if (devWalking.value) {
     stopDevWalk()
     return
@@ -139,6 +140,7 @@ function toggleDevWalk() {
   }, 320)
 }
 function resetDevJourney() {
+  devOpen.value = false
   stopDevWalk()
   journey.reset()
 }
@@ -174,7 +176,6 @@ function consumeHealthDistance() {
   pendingHealthConsumption.value = 0
 }
 async function play() { await journey.play(); consumeHealthDistance() }
-function skipJourney() { journey.skipJourney(); consumeHealthDistance() }
 function closeSettlement() { journey.pendingSettlement = null; pendingHealthConsumption.value = 0 }
 function lockedToast() { uni.showToast({ title: '这片区域还没有开放。', icon: 'none' }) }
 function showMapAttribution() {
@@ -340,15 +341,17 @@ function goBack() {
       </button>
 
       <!-- DEV 面板 -->
-      <view v-if="debugEnabled && devOpen" class="dev-panel">
-        <text class="dev-title">模拟步行</text>
-        <view class="dev-buttons">
-          <button v-for="n in [1, 3, 5, 10]" :key="n" @click="settle(n)">+{{ n }}</button>
+      <view v-if="debugEnabled && devOpen" class="dev-overlay" @click="devOpen = false">
+        <view class="dev-panel" @click.stop>
+          <text class="dev-title">模拟步行</text>
+          <view class="dev-buttons">
+            <button v-for="n in [1, 3, 5, 10]" :key="n" @click="settle(n)">+{{ n }}</button>
+          </view>
+          <button class="dev-walk" :class="{ active: devWalking }" @click="toggleDevWalk">
+            {{ devWalking ? '停止持续行走' : '开始持续行走' }}
+          </button>
+          <button class="dev-reset" @click="resetDevJourney">重置旅程</button>
         </view>
-        <button class="dev-walk" :class="{ active: devWalking }" @click="toggleDevWalk">
-          {{ devWalking ? '停止持续行走' : '开始持续行走' }}
-        </button>
-        <button class="dev-reset" @click="resetDevJourney">重置旅程</button>
       </view>
 
       <!-- 结算弹窗 -->
@@ -366,12 +369,6 @@ function goBack() {
         @continue="journey.continueJourney"
       />
 
-      <button v-if="journey.isAnimating && journey.activeEvent?.type === 'checkpoint'" class="skip-btn" @click="journey.continueJourney">
-        稍后查看
-      </button>
-      <button v-else-if="journey.isAnimating" class="skip-btn" @click="skipJourney">
-        跳过动画
-      </button>
     </template>
 
     <!-- 欢迎页 -->
@@ -544,6 +541,11 @@ header {
 .dev-toggle:active { transform: scale(0.92); }
 .dev-toggle.open { background: #e88343; }
 
+.dev-overlay {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+}
 .dev-panel {
   position: fixed;
   right: max(13px, calc((100vw - var(--mobile-width)) / 2 + 13px));
@@ -589,20 +591,6 @@ header {
   font-size: 11px;
   margin: 14px auto 0;
   padding: 6px 12px;
-}
-
-/* 跳过按钮 */
-.skip-btn {
-  position: fixed;
-  z-index: 10001;
-  top: calc(13px + env(safe-area-inset-top));
-  right: max(14px, calc((100vw - var(--mobile-width)) / 2 + 14px));
-  background: rgba(36, 49, 38, 0.85);
-  color: white;
-  font-size: 11px;
-  padding: 8px 14px;
-  border-radius: 18px;
-  backdrop-filter: blur(6px);
 }
 
 /* ===== 欢迎页 ===== */
